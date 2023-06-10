@@ -25,19 +25,6 @@ class TestRoutes(TestCase):
             'slug': 'new-slug'
         }
 
-    def test_user_can_create_note(self):
-        url = reverse('notes:add')
-        self.client.force_login(self.author)
-        response = self.client.post(url, data=self.form_data)
-        self.assertRedirects(response, reverse('notes:success'))
-        note_counter = Note.objects.count()
-        self.assertEqual(note_counter, 1)
-        new_note = Note.objects.get()
-        self.assertEqual(new_note.title, self.form_data['title'])
-        self.assertEqual(new_note.text, self.form_data['text'])
-        self.assertEqual(new_note.slug, self.form_data['slug'])
-        self.assertEqual(new_note.author, self.author)
-
     def test_anonymous_user_cant_create_note(self):
         url = reverse('notes:add')
         response = self.client.post(url, data=self.form_data)
@@ -56,18 +43,6 @@ class TestRoutes(TestCase):
                              errors=(self.note.slug + WARNING))
         note_counter = Note.objects.count()
         self.assertEqual(note_counter, 1)
-
-    def test_empty_slug(self):
-        url = reverse('notes:add')
-        self.client.force_login(self.author)
-        self.form_data.pop('slug')
-        response = self.client.post(url, data=self.form_data)
-        self.assertRedirects(response, reverse('notes:success'))
-        note_counter = Note.objects.count()
-        self.assertEqual(note_counter, 1)
-        new_note = Note.objects.get()
-        expected_slug = slugify(self.form_data['title'])
-        self.assertEqual(new_note.slug, expected_slug)
 
     def test_author_can_edit_note(self):
         url = reverse('notes:edit', args=[self.note.slug])
@@ -104,3 +79,41 @@ class TestRoutes(TestCase):
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
         note_counter = Note.objects.count()
         self.assertEqual(note_counter, 1)
+
+
+class LogicNote(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.author = User.objects.create(username='Лев Толстой')
+        cls.reader = User.objects.create(username='Читатель простой')
+
+        cls.form_data = {
+            'title': 'Новый заголовок',
+            'text': 'Новый текст',
+            'slug': 'new-slug'
+        }
+
+    def test_user_can_create_note(self):
+        url = reverse('notes:add')
+        self.client.force_login(self.author)
+        response = self.client.post(url, data=self.form_data)
+        self.assertRedirects(response, reverse('notes:success'))
+        note_counter = Note.objects.count()
+        self.assertEqual(note_counter, 1)
+        new_note = Note.objects.get()
+        self.assertEqual(new_note.title, self.form_data['title'])
+        self.assertEqual(new_note.text, self.form_data['text'])
+        self.assertEqual(new_note.slug, self.form_data['slug'])
+        self.assertEqual(new_note.author, self.author)
+
+    def test_empty_slug(self):
+        url = reverse('notes:add')
+        self.client.force_login(self.author)
+        self.form_data.pop('slug')
+        response = self.client.post(url, data=self.form_data)
+        self.assertRedirects(response, reverse('notes:success'))
+        note_counter = Note.objects.count()
+        self.assertEqual(note_counter, 1)
+        new_note = Note.objects.get()
+        expected_slug = slugify(self.form_data['title'])
+        self.assertEqual(new_note.slug, expected_slug)
